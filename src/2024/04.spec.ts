@@ -1,7 +1,8 @@
 import { expect, test, describe } from 'vitest'
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { selectDiagonalLeftDown, selectDiagonalLeftUp, selectDiagonalRightDown, selectHorizontal, selectHorizontalInverse, selectVertical, selectVerticalInverse } from './04';
+import { countMatches, iterateBoard, selectAllPossible2, selectDiagonalLeftDown, selectDiagonalLeftUp, selectDiagonalRightDown, selectDiagonalRightUp, selectHorizontal, selectHorizontalInverse, selectVertical, selectVerticalInverse } from './04';
+import { moveCursor } from 'readline';
 
 
 function parseBoard(input: string): string[][] {
@@ -51,7 +52,91 @@ S...`
       const board = parseBoard(input);
       expect(selectDiagonalLeftDown(board, [3, 0])).to.deep.equal(expected);
     });
+
+    test('test diagonal right up', () => {
+      const input = `...S
+..A.
+.M..
+X...`
+      const board = parseBoard(input);
+      expect(selectDiagonalRightUp(board, [0, 3])).to.deep.equal(expected);
+    });
   });
   
 
+  describe('part1', () => {
+    test('test set', () => {
+      const input = `MMMSXXMASM
+MSAMXMSMSA
+AMXSXMAAMM
+MSAMASMSMX
+XMASAMXAMM
+XXAMMXXAMA
+SMSMSASXSS
+SAXAMASAAA
+MAMMMXMMMM
+MXMXAXMASX`;
+        const expected = 'XMAS';
+        const board = parseBoard(input);
+        let matchesCount = 0;
+        iterateBoard(board, (board, position) => {
+          matchesCount += countMatches(board, position, expected);
+        });
+
+        expect(matchesCount).to.equal(18);
+    });
+
+    test('real set', async () => {
+      const content = await readFile(join(__dirname, '04.txt'), { encoding: 'utf8' });
+      const expected = 'XMAS';
+      const board = parseBoard(content);
+      let matchesCount = 0;
+      iterateBoard(board, (board, position) => {
+        matchesCount += countMatches(board, position, expected);
+      });
+
+      expect(matchesCount).to.equal(2530);
+    });
+  });
+
+  describe('part2', () => {
+    test('test set', () => {
+      const input = `.M.S......
+..A..MSMS.
+.M.S.MAA..
+..A.ASMSM.
+.M.S.M....
+..........
+S.S.S.S.S.
+.A.A.A.A..
+M.M.M.M.M.
+..........`;
+        const expected = 'MAS';
+        const board = parseBoard(input);
+        let matchesCount = 0;
+
+        iterateBoard(board, (board, position) => {
+          const matches = selectAllPossible2(board, position);
+          const xShapeMatchesCount = matches.filter(m => m.join('') === expected).length;
+          matchesCount += xShapeMatchesCount === 2 ? 1 : 0;
+        });
+
+        expect(matchesCount).to.equal(9);
+    });
+
+    test('real set', async () => {
+      const content = await readFile(join(__dirname, '04.txt'), { encoding: 'utf8' });
+      const expected = 'MAS';
+      const board = parseBoard(content);
+      let matchesCount = 0;
+      iterateBoard(board, (board, position) => {
+        const matches = selectAllPossible2(board, position);
+        const xShapeMatchesCount = matches.filter(m => m.join('') === expected).length;
+        matchesCount += xShapeMatchesCount === 2 ? 1 : 0;
+      });
+
+      expect(matchesCount).to.be.below(5493, 'Tested, incorrect, too high');
+      expect(matchesCount).to.equal(1921);
+    });
+  });
 });

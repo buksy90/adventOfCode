@@ -1,10 +1,42 @@
 import { expect, test, describe, beforeEach } from 'vitest'
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { moveDisk, parseDisk, strDisc } from './09';
+import { hashDisc, moveDisc, moveDisc2, parseDisk, strDisc, validateDisc } from './09';
 
+describe.skip('9', () => {
+  describe('part one', () => {
+    test('real data', async () => {
+      const content = await readFile(join(__dirname, '09.txt'), { encoding: 'utf8' });
 
-describe('6', () => {
+      const disc = parseDisk(content);
+      moveDisc(disc);
+
+      expect(hashDisc(disc)).to.equal(6519155389266);
+    });
+  });
+
+  describe('part two', () => {
+    test('example', () => {
+      const input = '2333133121414131402';
+      const disc = parseDisk(input);
+      moveDisc2(disc);
+      validateDisc(disc);
+
+      expect(hashDisc(disc)).to.equal(2858);
+    });
+
+    test('real data', async () => {
+      const content = await readFile(join(__dirname, '09.txt'), { encoding: 'utf8' });
+
+      const disc = parseDisk(content);
+      moveDisc2(disc);
+      validateDisc(disc);
+      
+      expect(hashDisc(disc)).to.be.above(6531794764631, 'tested, too low');
+      expect(hashDisc(disc)).to.equal(6547228115826);
+    });
+  });
+
   describe('fns', () => {
     test('parseDisk examle', async () => {
       const input = '12345';
@@ -60,14 +92,45 @@ describe('6', () => {
       expect(str).to.equal('00...111...2...333.44.5555.6666.777.888899');
     });
 
-    test.only('moveDisc', () => {
+    test('moveDisc', () => {
       const input = '12345';
       const visualized = parseDisk(input);
-
-      console.log(strDisc(visualized));
-      moveDisk(visualized);
+      moveDisc(visualized);
 
       expect(strDisc(visualized)).to.equal('022111222......');
+    });
+
+    test('moveDisc other example', () => {
+      const input = '2333133121414131402';
+      const visualized = parseDisk(input);
+      moveDisc(visualized);
+
+      expect(strDisc(visualized)).to.equal('0099811188827773336446555566..............');
+    });
+
+    test('moveDisc2', () => {
+      const input = '2333133121414131402';
+      const disc = parseDisk(input);
+      moveDisc2(disc);
+      validateDisc(disc);
+
+      expect(strDisc(disc)).to.equal('00992111777.44.333....5555.6666.....8888..');
+    });
+
+    test('hashDisc', () => {
+      const input = '12345';
+      const visualized = parseDisk(input);
+      moveDisc(visualized);
+
+      expect(hashDisc(visualized)).to.equal(60);
+    });
+
+    test('hashDisc2', () => {
+      const input = '2333133121414131402';
+      const disc = parseDisk(input);
+      moveDisc(disc);
+
+      expect(hashDisc(disc)).to.equal(1928);
     });
   });
 });

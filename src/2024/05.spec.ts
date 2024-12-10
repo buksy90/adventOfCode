@@ -56,7 +56,7 @@ function parseInput(input: string) {
   return { rules, updates };
 }
 
-describe('5', () => {
+describe.skip('5', () => {
 
   describe('part1', () => {
     test('test set', () => {

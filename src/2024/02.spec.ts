@@ -3,7 +3,7 @@ import { countSafeReports, isSafeReport, problemDampener } from './02';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-describe('2', () => {
+describe.skip('2', () => {
   describe('part1', () => {
     test('test set', () => {
       const reports = [

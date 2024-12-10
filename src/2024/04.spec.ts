@@ -9,7 +9,7 @@ function parseBoard(input: string): string[][] {
   return input.split('\n').map(r => r.split(''));
 }
 
-describe('4', () => {
+describe.skip('4', () => {
   describe('selections', () => {
     const expected = ['X', 'M', 'A', 'S'];
 

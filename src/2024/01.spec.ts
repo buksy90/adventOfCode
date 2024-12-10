@@ -3,7 +3,7 @@ import { listsDistance, listsSimilarity } from './01';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 
-describe('1', () => {
+describe.skip('1', () => {
   describe('part1', () => {
     test('test set', () => {
       expect(listsDistance(

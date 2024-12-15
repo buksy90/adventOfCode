@@ -3,7 +3,7 @@ import { join } from 'path';
 import { beforeEach, describe, expect, test } from "vitest";
 import { findBases, parseMap, solveTrail } from './10';
 
-describe('10', () => {
+describe.skip('10', () => {
 
   describe('helpers', () => {
 

@@ -1,45 +1,178 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { beforeEach, describe, expect, test } from "vitest";
-import { isDiagonal, getAntinodes } from "./08";
+import { describe, expect, test } from "vitest";
+import { isDiagonal, getAntinodes, Position, TMap, recognizeSignals, getAllAntinodes, parseMap } from "./08";
+
 
 describe('08', () => {
-  describe('helpers', () => {
+  describe('part one', () => {
+    test('example', async () => {
+      const content = await readFile(join(__dirname, '08.txt'), { encoding: 'utf8' });
+      const map = parseMap(content);
 
-describe('08', () => {
+      const antinodes = getAllAntinodes(map);
+      expect(antinodes.length).to.be.above(238, 'incorrect, too low');
+      expect(antinodes.length).to.be.below(250, 'incorrect, too high');
+      expect(antinodes.length).to.equal(249);
+    });
+  });
+
   describe('helpers', () => {
-    it('isDiagonal should return false for horizontal points', () => {
+    test('isDiagonal should return false for horizontal points', () => {
       const p1: Position = [0, 0];
       const p2: Position = [1, 0];
       expect(isDiagonal(p1, p2)).toBe(false);
     });
 
-    it('isDiagonal should return false for vertical points', () => {
+    test('isDiagonal should return false for vertical points', () => {
       const p1: Position = [0, 0];
       const p2: Position = [0, 1];
       expect(isDiagonal(p1, p2)).toBe(false);
     });
 
-    it('isDiagonal should return the difference for diagonal points', () => {
+    test('isDiagonal should return the difference for diagonal points', () => {
       const p1: Position = [0, 0];
       const p2: Position = [2, 2];
       expect(isDiagonal(p1, p2)).toBe(2);
     });
 
-    it('getAntinodes should return an empty array for non-diagonal points', () => {
-      const p1: Position = [0, 0];
-      const p2: Position = [1, 0];
-      const map: TMap = [];
-      expect(getAntinodes(p1, p2, map)).toEqual([]);
+    test('getAntinodes should return antinodes for horizontal points', () => {
+      const p1: Position = [1, 0];
+      const p2: Position = [2, 0];
+      expect(getAntinodes(p1, p2, [4, 1])).to.have.deep.members([[0, 0], [3, 0]]);
     });
 
-    it('getAntinodes should return antinodes for diagonal points', () => {
-      const p1: Position = [0, 0];
-      const p2: Position = [2, 2];
-      const map: TMap = Array(5).fill(0).map(() => Array(5).fill(0));
-      expect(getAntinodes(p1, p2, map)).toEqual([[2, 2], [0, 0]]);
+    test('getAntinodes should return antinodes for vertical points', () => {
+      const p1: Position = [0, 1];
+      const p2: Position = [0, 2];
+      expect(getAntinodes(p1, p2, [1, 4])).to.have.deep.members([[0, 0], [0, 3]]);
     });
-  });
-});
+
+    test('getAntinodes should return antinodes for diagonal points', () => {
+      const p1: Position = [1, 1];
+      const p2: Position = [2, 2];
+      expect(getAntinodes(p1, p2, [4 ,4])).to.have.deep.members([[0, 0], [3, 3]]);
+
+      const p3: Position = [1, 1];
+      const p4: Position = [2, 2];
+      expect(getAntinodes(p3, p4, [4, 4])).to.have.deep.members([[0, 0], [3, 3]]);
+    });
+
+    describe('getAllAntinodes', () => {
+      test('example 1', () => {
+        const input = `..........
+        ..........
+        ..........
+        ....a.....
+        ..........
+        .....a....
+        ..........
+        ..........
+        ..........
+        ..........`;
+        const map = parseMap(input);
+        const antinodes = getAllAntinodes(map);
+
+        expect(antinodes).to.have.deep.members([[3,1], [6, 7]]);
+      });
+
+      test('example 2', () => {
+        const input = `..........
+        ..........
+        ..........
+        ....a.....
+        ........a.
+        .....a....
+        ..........
+        ..........
+        ..........
+        ..........`;
+        const map = parseMap(input);
+        const antinodes = getAllAntinodes(map);
+
+        expect(antinodes).to.have.deep.members([[3,1], [6, 7], [0,2], [2, 6]]);
+      });
+
+      test('example 3', () => {
+        const input = `..........
+        ..........
+        ..........
+        ....a.....
+        ........a.
+        .....a....
+        ..........
+        ......A...
+        ..........
+        ..........`;
+        const map = parseMap(input);
+        const antinodes = getAllAntinodes(map);
+
+        expect(antinodes).to.have.deep.members([[3,1], [0,2], [2, 6],
+          // antinode covering "A" signal
+          [6,7]
+        ]);
+      });
+
+      test('example 4', () => {
+        const input = `............
+        ........0...
+        .....0......
+        .......0....
+        ....0.......
+        ......A.....
+        ............
+        ............
+        ........A...
+        .........A..
+        ............
+        ............`;
+        const map = parseMap(input);
+        const antinodes = getAllAntinodes(map);
+
+        expect(antinodes).to.have.deep.members([
+          [6,0], [11,0], [3,1], [4,2], [10,2], [2,3], [9,4],
+          [1,5], [3,6], [0,7], [7,7], [10,10], [10,11],
+
+          // When following added then implementation logic passes part 1
+          [6,5]
+        ]);
+
+        expect(antinodes.length).to.equal(14);
+      });
+    });
+
+    describe('recognizeSignals', () => {
+      test('should return an empty map for an empty input', () => {
+        const input: TMap = [];
+        expect(recognizeSignals(input)).toEqual(new Map());
+      });
+
+      test('should return a map with a single signal', () => {
+        const input: TMap = [['A']];
+        expect(recognizeSignals(input)).toEqual(new Map([['A', [[0, 0]]]]));
+      });
+
+      test('should return a map with multiple signals', () => {
+        const input: TMap = [
+          ['A', 'B'],
+          ['B', 'A']
+        ];
+        expect(recognizeSignals(input)).toEqual(new Map([
+          ['A', [[0, 0], [1, 1]]],
+          ['B', [[1, 0], [0, 1]]]
+        ]));
+      });
+
+      test('should ignore empty signals', () => {
+        const input: TMap = [
+          ['A', '.'],
+          ['.', 'B']
+        ];
+        expect(recognizeSignals(input)).toEqual(new Map([
+          ['A', [[0, 0]]],
+          ['B', [[1, 1]]]
+        ]));
+      });
+    });
   });
 });

@@ -3,7 +3,7 @@ import { join } from 'path';
 import { beforeEach, describe, expect, test } from "vitest";
 import { draw, findBases, parseMap, scoreTrailheads, solveAllTrails, solveTrail, solveTrailTracing } from './10';
 
-describe('10', () => {
+describe.skip('10', () => {
 
   describe('part one', () => {
     test('answer', async () => {

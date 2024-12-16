@@ -1,12 +1,14 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
-import { describe, expect, test } from "vitest";
-import { isDiagonal, getAntinodes, Position, TMap, recognizeSignals, getAllAntinodes, parseMap } from "./08";
+import { beforeEach, describe, expect, test } from "vitest";
+import { isDiagonal, getAntinodes, Position, TMap, recognizeSignals, getAllAntinodes, parseMap, setDistance, getAllAntinodesDistances, parseExpectedAntinodes, draw } from "./08";
 
 
 describe('08', () => {
+  beforeEach(() => setDistance(1));
+
   describe('part one', () => {
-    test('example', async () => {
+    test('answer', async () => {
       const content = await readFile(join(__dirname, '08.txt'), { encoding: 'utf8' });
       const map = parseMap(content);
 
@@ -14,6 +16,42 @@ describe('08', () => {
       expect(antinodes.length).to.be.above(238, 'incorrect, too low');
       expect(antinodes.length).to.be.below(250, 'incorrect, too high');
       expect(antinodes.length).to.equal(249);
+    });
+  });
+
+  describe('part two', () => {
+    test.only('example', async () => {
+      const input = `T....#....
+      ...T......
+      .T....#...
+      .........#
+      ..#.......
+      ..........
+      ...#......
+      ..........
+      ....#.....
+      ..........`;
+        const expectedAntinodes = parseExpectedAntinodes(input);
+        const map = parseMap(input.replaceAll('#', '.'));
+        const antinodes = getAllAntinodesDistances(map);
+        const visuzalized = draw(antinodes, [], [map[0].length, map.length]);
+
+        expect(antinodes.length).to.equal(9);
+
+        expect(antinodes).to.have.deep.members([[3,1], [6, 7]]);
+    });
+
+    test.only('x', () => {
+      const a1 = getAntinodes([0,0], [1,2], [10,10], true);
+      expect(a1).to.include.deep.members([[2,4], [1,2]]);
+
+      setDistance(2);
+      const a2 = getAntinodes([0,0], [1,2], [10,10], true);
+      expect(a2).to.include.deep.members([[2,4], [3,6]]);
+
+      setDistance(3);
+      const a3 = getAntinodes([0,0], [1,2], [10,10], true);
+      expect(a3).to.include.deep.members([[3,6], [4,8]]);
     });
   });
 

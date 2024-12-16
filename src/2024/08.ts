@@ -20,6 +20,10 @@ export function setDistance(d: number) {
     distance = d;
 }
 
+function assertPolarity(n1: number, n2: number): boolean {
+    return (n1 > 0 && n2 > 0) || (n1 < 0 && n2 < 0) || (n1 === 0 && n2 === 0);
+}
+
 export function getAntinodes(p1: Position, p2: Position, mapDimensions: readonly [number, number], anyDistance = false): Position[] {
     const diff = [
         p1[0] - p2[0],
@@ -43,10 +47,16 @@ export function getAntinodes(p1: Position, p2: Position, mapDimensions: readonly
         const diff1 = Math.sqrt(Math.pow(n[0] - p1[0], 2) + Math.pow(n[1] - p1[1], 2));
         const diff2 = Math.sqrt(Math.pow(n[0] - p2[0], 2) + Math.pow(n[1] - p2[1], 2));
 
+        const nDiff = [ p1[0] - n[0], p1[1] - n[1] ];
+        const ratio = [ nDiff[0] % diff[0], nDiff[1] % diff[1]];
+        const polarity = (assertPolarity(nDiff[0], diff[0]) && assertPolarity(nDiff[1], diff[1])) || (!assertPolarity(nDiff[0], diff[0]) && !assertPolarity(nDiff[1], diff[1]));
+        const condition = ratio[0] + ratio[1] === 0 && polarity;
+
         const ratioPoint = p1[0]+p1[1] > p2[0]+p2[1] ? p1[1] / p1[0] : p2[1] / p2[0];
         return anyDistance
         // ? Math.max(diff1, diff2) / Math.min(diff1, diff2) == 1.5
-        ? n[1] / n[0] == ratioPoint
+        //? n[1] / n[0] == ratioPoint
+        ? condition
         : diff1 == 2 * diff2 || diff2 == 2 * diff1;
     });
 

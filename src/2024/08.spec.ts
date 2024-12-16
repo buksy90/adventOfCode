@@ -20,7 +20,7 @@ describe('08', () => {
   });
 
   describe('part two', () => {
-    test.only('example', async () => {
+    test('example', async () => {
       const input = `T....#....
       ...T......
       .T....#...
@@ -41,7 +41,40 @@ describe('08', () => {
         expect(antinodes).to.have.deep.members([[3,1], [6, 7]]);
     });
 
-    test.only('x', () => {
+    test('example2', async () => {
+      const input = `##....#....#
+.#.#....0...
+..#.#0....#.
+..##...0....
+....0....#..
+.#...#A....#
+...#..#.....
+#....#.#....
+..#.....A...
+....#....A..
+.#........#.
+...#......##`;
+        const expectedAntinodes = parseExpectedAntinodes(input);
+        const map = parseMap(input.replaceAll('#', '.'));
+        const antinodes = getAllAntinodesDistances(map);
+        const visuzalized = draw(antinodes, [], [map[0].length, map.length]);
+
+        expect(antinodes.length).to.equal(34);
+
+        expect(antinodes).to.have.deep.members([[3,1], [6, 7]]);
+    });
+
+    test.only('x3', () => {
+      const a1 = getAntinodes([5,2], [4,4], [10,12], true);
+      expect(a1).to.include.deep.members([[6,0], [3,6], [2,8], [1,10]]);
+    });
+
+    test('x2', () => {
+      const a1 = getAntinodes([1,2], [3,1], [10,10], true);
+      expect(a1).to.include.deep.members([[5,0]]);
+    });
+
+    test('x', () => {
       const a1 = getAntinodes([0,0], [1,2], [10,10], true);
       expect(a1).to.include.deep.members([[2,4], [1,2]]);
 
@@ -52,6 +85,16 @@ describe('08', () => {
       setDistance(3);
       const a3 = getAntinodes([0,0], [1,2], [10,10], true);
       expect(a3).to.include.deep.members([[3,6], [4,8]]);
+    });
+
+    test.only('answer', async () => {
+      const content = await readFile(join(__dirname, '08.txt'), { encoding: 'utf8' });
+      const map = parseMap(content);
+
+      const antinodes = getAllAntinodesDistances(map);
+      expect(antinodes.length).to.be.above(161, 'tested, too low');
+      expect(antinodes.length).to.be.above(501, 'tested, too low');
+      expect(antinodes.length).to.equal(905);
     });
   });
 

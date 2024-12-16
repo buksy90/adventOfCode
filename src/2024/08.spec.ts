@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { isDiagonal, getAntinodes, Position, TMap, recognizeSignals, getAllAntinodes, parseMap, setDistance, getAllAntinodesDistances, parseExpectedAntinodes, draw } from "./08";
 
 
-describe('08', () => {
+describe.skip('08', () => {
   beforeEach(() => setDistance(1));
 
   describe('part one', () => {

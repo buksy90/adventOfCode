@@ -1,14 +1,14 @@
-import { readFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { beforeEach, describe, expect, test } from "vitest";
-import { Trace, draw, findAllTraces, parseMap, score, scoreRotation } from "./16";
+import { Trace, draw, eliminateBadBranch, eliminateBadBranches, eliminateDeadBranch, eliminateDeadBranches, findAllTraces, isEquallyGood, isReturningInOtherBranch, parseMap, score, scoreRotation } from "./16";
 
 
 describe('16', () => {
 
   describe('part one', () => {
-    test.only('answer', async () => {
-      const input = await readFile(join(__dirname, '16.txt'), { encoding: 'utf8' });
+    test.skip('answer', async () => {
+      const input = await readFile(join(__dirname, '16e2.txt'), { encoding: 'utf8' });
       const map = parseMap(input);
 
       const traces = findAllTraces(map);
@@ -17,7 +17,10 @@ describe('16', () => {
       const visualization = traces.map(trace => draw(trace, map));
       const scores = traces.map(trace => score(trace));
       scores.sort((a,b) => a-b);
-      expect(scores[0]).to.equal(0);
+      expect(scores[0]).to.be.below(130480, 'tested, too high');
+      expect(scores[0]).to.be.below(120480, 'tested, too high');
+      expect(scores[0]).to.be.above(70480, 'tested, too high');
+      expect(scores[0]).to.equal('?');
     });
   });
 
@@ -106,6 +109,194 @@ describe('16', () => {
         [1,1], [2, 1], [2, 0],
       ];
       expect(scoreRotation(trace, 2)).to.equal(1000);
+    });
+
+    test('isReturningInOtherBranch', () => {
+      const returningTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[3,2], [3,1], [3,0], [2,0]],
+      ];
+      expect(isReturningInOtherBranch(returningTrace[1], returningTrace)).to.be.true;
+
+      const parallelTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[4,3], [4,2], [4,1], [4,0]],
+      ];
+      expect(isReturningInOtherBranch(parallelTrace[1], parallelTrace)).to.be.false;
+    });
+
+    test('isEquallyGood', () => {
+      const returningTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[3,2], [3,1], [3,0], [2,0]],
+      ];
+      expect(isEquallyGood(returningTrace[1], returningTrace)).to.be.false;
+
+      const parallelTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[4,3], [4,2], [4,1], [4,0]],
+      ];
+      expect(isEquallyGood(parallelTrace[1], parallelTrace)).to.be.true;
+    });
+  });
+
+  describe('eliminate dead branch', () => {
+    test('1', () => {
+      const input = `
+      #################
+      #.#.#...#####.#E#
+      #.#.########.##.#
+      #S..............#
+      #################`;
+      const expected = `
+      #################
+      #######.#####.#E#
+      ###############.#
+      #S..............#
+      #################`;
+      const map = parseMap(input);
+
+      eliminateDeadBranches(map);
+      const expectedDrawn = draw([], parseMap(expected));
+      const result = draw([], map);
+      expect(result).to.deep.equal(expectedDrawn);
+    });
+
+    test('2', () => {
+      const input = `
+      #################
+      #####...###....E#
+      #.#.########.##.#
+      #S..............#
+      #################`;
+      const expected = `
+      #################
+      #######.####...E#
+      ############.##.#
+      #S..............#
+      #################`;
+      const map = parseMap(input);
+
+      eliminateDeadBranches(map);
+      const expectedDrawn = draw([], parseMap(expected));
+      const result = draw([], map);
+      expect(result).to.deep.equal(expectedDrawn);
+    });
+
+    test('3', () => {
+      const input = `
+      #################
+      #####....##....E#
+      #.#.#.##.###.##.#
+      #S..............#
+      #################`;
+      const expected = `
+      #################
+      #####....###...E#
+      #####.##.###.##.#
+      #S..............#
+      #################`;
+      const map = parseMap(input);
+
+      eliminateDeadBranches(map);
+      const expectedDrawn = draw([], parseMap(expected));
+      const result = draw([], map);
+      for(let i = 0; i < map.length; i++) {
+        expect(result[i]).to.deep.equal(expectedDrawn[i], `Row ${i}`);
+      }
+      expect(result).to.deep.equal(expectedDrawn);
+    });
+
+    test('4 cuts bad branc', () => {
+      const input = `
+      #################
+      #####....##....E#
+      #.#.#.##.###.##.#
+      #S..............#
+      #################`;
+      const expected = `
+      #################
+      #####....##....E#
+      #.#.#.######.##.#
+      #S..............#
+      #################`;
+      const map = parseMap(input);
+
+      eliminateBadBranches(map);
+      const expectedDrawn = draw([], parseMap(expected));
+      const result = draw([], map);
+      for(let i = 0; i < map.length; i++) {
+        expect(result[i]).to.deep.equal(expectedDrawn[i], `Row ${i}`);
+      }
+      expect(result).to.deep.equal(expectedDrawn);
+    });
+
+    test('5 keeps equaly good branches', () => {
+      const input = `
+      #################
+      #############..E#
+      #####.........###
+      #####.#######.###
+      #S............###
+      #################`;
+      const expected = `
+      #################
+      #############..E#
+      #####.........###
+      #####.#######.###
+      #S............###
+      #################`;
+      const map = parseMap(input);
+
+      eliminateBadBranches(map);
+      const expectedDrawn = draw([], parseMap(expected));
+      const result = draw([], map);
+      for(let i = 0; i < map.length; i++) {
+        expect(result[i]).to.deep.equal(expectedDrawn[i], `Row ${i}`);
+      }
+      expect(result).to.deep.equal(expectedDrawn);
+    });
+  });
+
+  describe.skip('improve map', () => {
+    test('eliminate answer 1', async () => {
+      const input = await readFile(join(__dirname, '16.txt'), { encoding: 'utf8' });
+      const map = parseMap(input);
+
+      eliminateDeadBranches(map);
+
+      const strMap = map.map(r => r.join('')).join('\n');
+      await writeFile(join(__dirname, '16e.txt'), strMap, { encoding: 'utf8' });
+    });
+
+    test('eliminate answer 2', async () => {
+      const input = await readFile(join(__dirname, '16e.txt'), { encoding: 'utf8' });
+      const map = parseMap(input);
+
+      eliminateDeadBranches(map);
+
+      const strMap = map.map(r => r.join('')).join('\n');
+      await writeFile(join(__dirname, '16e2.txt'), strMap, { encoding: 'utf8' });
+    });
+
+    test('eliminate bad answer 1', async () => {
+      const input = await readFile(join(__dirname, '16e2.txt'), { encoding: 'utf8' });
+      const map = parseMap(input);
+
+      eliminateBadBranches(map);
+
+      const strMap = map.map(r => r.join('')).join('\n');
+      await writeFile(join(__dirname, '16e2b.txt'), strMap, { encoding: 'utf8' });
+    });
+
+    test('eliminate dead answer 3', async () => {
+      const input = await readFile(join(__dirname, '16e2b.txt'), { encoding: 'utf8' });
+      const map = parseMap(input);
+
+      eliminateDeadBranches(map);
+
+      const strMap = map.map(r => r.join('')).join('\n');
+      await writeFile(join(__dirname, '16e2be.txt'), strMap, { encoding: 'utf8' });
     });
   });
 });

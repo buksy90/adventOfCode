@@ -90,10 +90,10 @@ function assertSamePos(p1: Position, p2: Position): boolean {
   return p1[0] === p2[0] && p1[1] === p2[1];
 }
 
-function hasBeenSeen(traces: Trace[], position: Position): boolean {
+function hasBeenSeen(traces: Trace[], position: Position, maxStepsToPosition = 0): boolean {
   // Following may not be correct, e.g. if position has been seen after
   // same amount of steps then it should be considered as good
-  return traces.some(trace => trace.some(p => assertSamePos(p, position)));
+  return traces.some(trace => trace.some((p, index) => assertSamePos(p, position) && index > maxStepsToPosition));
 }
 
 const MAX_STEPS = 1000;
@@ -108,8 +108,7 @@ export function findAllTraces(map: TMap): Trace[] {
     const newTraces: Position[][] = [];
     for(const trace of possible) {
       const nextSteps = getNextPossibleMovements(map, trace);
-      const nextNewSteps = nextSteps.filter(s => hasBeenSeen(possible, s));
-      //const nextNewSteps = nextSteps;
+      const nextNewSteps = nextSteps.filter(s => !hasBeenSeen(possible, s, trace.length));
 
       if (nextNewSteps.length) {
         const firstResult = nextNewSteps.pop()!;

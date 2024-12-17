@@ -7,7 +7,7 @@ import { Trace, draw, findAllTraces, parseMap, score, scoreRotation } from "./16
 describe('16', () => {
 
   describe('part one', () => {
-    test.skip('answer', async () => {
+    test.only('answer', async () => {
       const input = await readFile(join(__dirname, '16.txt'), { encoding: 'utf8' });
       const map = parseMap(input);
 

@@ -96,7 +96,7 @@ function hasBeenSeen(traces: Trace[], position: Position, maxStepsToPosition = 0
   return traces.some(trace => trace.some((p, index) => assertSamePos(p, position) && index > maxStepsToPosition));
 }
 
-const MAX_STEPS = 1000;
+const MAX_STEPS = 20000;
 export function findAllTraces(map: TMap): Trace[] {
   const start = findCharacter(map, 'S');
   const end = findCharacter(map, 'E');
@@ -133,6 +133,8 @@ export function findAllTraces(map: TMap): Trace[] {
     toBeRemoved.length = 0;
 
 
+    //const visualization = possible.map(trace => draw(trace, map, 130));
+
     // Remove finished
     for(let i = possible.length - 1; i >= 0; i--) {
       const trace = possible[i];
@@ -146,6 +148,8 @@ export function findAllTraces(map: TMap): Trace[] {
     }
   } while (++iteration < MAX_STEPS && possible.length > 0)
 
+  console.log(`Possible count is ${possible.length} after ${iteration} iterations`);
+
   return found;
 }
 
@@ -153,11 +157,11 @@ export function parseMap(input: string): TMap {
   return input.trim().split('\n').map(row => row.trim().split(''));
 }
 
-export function draw(trace: Trace, map: TMap): TMap {
+export function draw(trace: Trace, map: TMap, cutYLess = 0): TMap {
   const result = map.map(row => row.map(c => c));
   for(const step of trace) {
     result[step[1]][step[0]] = 'X';
   }
 
-  return result;
+  return result.filter((_, y) => y >= cutYLess);
 }

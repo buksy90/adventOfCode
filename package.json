@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest --silent=false"
+    "test": "vitest --silent false --no-isolate --no-file-parallelism --pool=threads",
+    "test:max": "cross-env NODE_ENV=production NODE_OPTIONS=\"--max-old-space-size=24192\" vitest run --silent false --no-isolate --no-file-parallelism --pool=threads"
   },
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^22.10.1",
+    "cross-env": "^7.0.3",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

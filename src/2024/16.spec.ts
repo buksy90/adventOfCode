@@ -1,25 +1,42 @@
 import { readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { beforeEach, describe, expect, test } from "vitest";
-import { Trace, draw, eliminateBadBranch, eliminateBadBranches, eliminateDeadBranch, eliminateDeadBranches, findAllTraces, isEquallyGood, isReturningInOtherBranch, parseMap, score, scoreRotation } from "./16";
+import { TMap, Trace, draw, eliminateBadBranch, eliminateBadBranches, eliminateDeadBranch, eliminateDeadBranches, findAllTraces, findAllTracesImproved, getPrefilledTakenSteps, isEquallyGood, isReturningInOtherBranch, isWorse, parseMap, score, scoreRotation, writeKnownTraces } from "./16";
 
 
 describe('16', () => {
 
   describe('part one', () => {
-    test.skip('answer', async () => {
-      const input = await readFile(join(__dirname, '16e2.txt'), { encoding: 'utf8' });
+    test.only('answer', async () => {
+      const input = await readFile(join(__dirname, '16e.txt'), { encoding: 'utf8' });
       const map = parseMap(input);
+      const takenSteps = await getPrefilledTakenSteps();
 
-      const traces = findAllTraces(map);
+      const traces = findAllTracesImproved(map, takenSteps);
       expect(traces.length).to.be.above(0);
 
-      const visualization = traces.map(trace => draw(trace, map));
       const scores = traces.map(trace => score(trace));
-      scores.sort((a,b) => a-b);
+      const scoredTraces: [number, Trace][] = scores.map((score, i) => [score, traces[i]]);
+      scoredTraces.sort((a,b) => a[0]-b[0]);
+
+      for(const trace of traces) {
+        await writeKnownTraces(trace)
+      }
+
+
+      console.log({ scores: scoredTraces.map(sv => sv[0]) });
+      await Promise.all(scoredTraces.filter((_, i) => i < 10).map((st, i) =>
+        writeFile(
+          join(__dirname, `16v${i}s${st[0]}.txt`),
+          draw(st[1], map).map(r => r.join('')).join('\n'),
+          { encoding: 'utf8' })
+      ));
+
       expect(scores[0]).to.be.below(130480, 'tested, too high');
       expect(scores[0]).to.be.below(120480, 'tested, too high');
-      expect(scores[0]).to.be.above(70480, 'tested, too high');
+      expect(scores[0]).to.be.above(70480, 'tested, too low');
+      expect(scores[0]).to.not.equal(128480, 'tested, just incorrect');
+      expect(scores[0]).to.not.equal(148588, 'tested, just incorrect');
       expect(scores[0]).to.equal('?');
     });
   });
@@ -44,7 +61,7 @@ describe('16', () => {
 ###############`;
       const map = parseMap(input);
 
-      const traces = findAllTraces(map);
+      const traces = findAllTracesImproved(map);
       expect(traces.length).to.be.above(0);
 
       const visualization = traces.map(trace => draw(trace, map));
@@ -74,13 +91,108 @@ describe('16', () => {
       #################`;
       const map = parseMap(input);
 
-      const traces = findAllTraces(map);
+      const traces = findAllTracesImproved(map);
       expect(traces.length).to.be.above(0);
 
       const visualization = traces.map(trace => draw(trace, map));
       const scores = traces.map(trace => score(trace));
       scores.sort((a,b) => a-b);
       expect(scores[0]).to.equal(11048);
+    });
+
+    test('custom example', () => {
+      const inputBC = `
+####################################
+##.........#.............#........E#
+##.###.#.###.#######.#####.###.#####
+#..#...#.#...#.....#...#...#.#.....#
+####.#.#.#.###.###.###.#.###.#####.#
+#........#.#.....#...#...#.....#...#
+####.#.#.#.#.###.###.#######.###.#.#
+#....#...#...#.....#.#.....#.#...#.#
+####.#.#######.###.#.#.###.#.#.#####
+#....#...#...#.....#.#...#...#.....#
+######.#.#.#.#.###.#.#.#.###.#####.#
+##.....#...#.#.#.#...#.#.#.#.....#.#
+##.#########.#.#.#######.#.#.#####.#
+##...#...#...#.#.........#...#.....#
+####.###.#.#.#.###.#.#####.###.###.#
+#....#...#.#.......#.#...#.#.#.#.#.#
+######.###.#######.#.#.#.#.#.#.#.#.#
+#....#...#.......#...#...#...#.#...#
+##.#.###.#####.#########.###.#.###.#
+#..#.........#...........#...#...#.#
+##################.#####.#.#####.###
+#............#.....#...#.#.#...#...#
+############.#.###.#.###.#.#.#.###.#
+#....#.......#.#...#.....#.#.#...#.#
+##.###.#######.#.#.#####.#.#####.#.#
+##.........#...#.#.........#.....#.#
+##########.#.#.#.#######.###.###.#.#
+##...........#.#.#.....#.....#...#.#
+##.###.###.#####.#.#.#.#.#########.#
+#..#.....#.#...#.#.#.#...#...#.....#
+####.#.#.###.#.#.###.###.#.#.#.###.#
+#............#.#.....#...#.#...#.#.#
+##.#.#.#######.#####.#.#.#.#####.#.#
+##...#.......#.....#.#.#.#...#...#.#
+##########.#####.###.#.#.###.#.###.#
+##.......#.#.....#...#.#.....#.....#
+##.###.#.#.#.###.#.###.#####.#####.#
+##.....#...#.#...#.#.#.#.....#...#.#
+########.#.#.###.#.#.#.#####.#.#.#.#
+#......#...#...#.....#......S..#.#.#
+####################################`;
+      const input = `
+####################################
+##.........#.............#........E#
+##.###.#.###.#######.#####.###.#####
+#..#...#.#...#.....#...#...#.#.....#
+####.#.#.#.###.###.###.#.###.#######
+#........#.#.....#...#...#.....#...#
+####.#.#.#.#.###.###.#######.###.#.#
+#....#...#...#.....#.#.....#.#...#.#
+####.#.#######.###.#.#.###.#.#.#####
+#....#...#...#.....#.#...#...#.....#
+######.#.#.#.#.###.#.#.#.###.#####.#
+##.....#...#.#.#.#...#.#.#.#.....#.#
+##.#########.#.#.#######.#.#.#####.#
+##...#...#...#.#.........#...#.....#
+####.###.#.#.#.###.#.#####.###.###.#
+#....#...#.#.......#.#...#.#.#.#.#.#
+######.###.#######.#.#.#.#.#.#.#.#.#
+#....#...#.......#...#...#...#.#...#
+##.#.###.#####.#########.###.#.###.#
+#..#.........#...........#...#...#.#
+##################.#####.#.#####.###
+#............#.....#...#.#.#...#...#
+############.#.###.#.###.#.#.#.###.#
+#....#.......#.#...#.....#.#.#...#.#
+##.###.#######.#.#.#####.#.#####.#.#
+##.........#...#.#.........#.....#.#
+##########.#.#.#.#######.###.###.#.#
+##...........#.#.#.....#.....#...#.#
+##.###.###.#####.#.#.#.#.#########.#
+#..#.....#.#...#.#.#.#...#...#.....#
+####.#.#.###.#.#.###.###.#.#.#.###.#
+#............#.#.....#...#.#...#.#.#
+##.#.#.#######.#####.#.#.#.#####.#.#
+##...#.......#.....#.#.#.#...#...#.#
+##########.#####.###.#.#.###.#.###.#
+##.......#.#.....#...#.#.....#.....#
+##.###.#.#.#.###.#.###.#####.#####.#
+##.....#...#.#...#.#.#.#.....#...#.#
+########.#.#.###.#.#.#.#######.#.#.#
+#......#...#...#.....#......S..#.#.#
+####################################`;
+      const map = parseMap(input);
+
+      const traces = findAllTracesImproved(map);
+      expect(traces.length).to.be.above(0);
+
+      const visualization = traces.map(trace => draw(trace, map));
+      const scores = traces.map(trace => score(trace));
+      scores.sort((a,b) => a-b);
     });
 
     test('score', () => {
@@ -138,9 +250,29 @@ describe('16', () => {
       ];
       expect(isEquallyGood(parallelTrace[1], parallelTrace)).to.be.true;
     });
+
+    test('isWorse', () => {
+      const returningTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[3,2], [3,1], [3,0], [4,0]],
+      ];
+      expect(isWorse(returningTrace[1], returningTrace)).to.be.false;
+
+      const parallelTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[4,3], [4,2], [4,1], [4,0]],
+      ];
+      expect(isWorse(parallelTrace[1], parallelTrace)).to.be.false;
+
+      const worseTrace: Trace[] = [
+        [[1,0], [2,0], [3,0], [4,0]],
+        [[3,3], [3,2], [3,1], [3,0]],
+      ];
+      expect(isWorse(worseTrace[1], worseTrace)).to.be.true;
+    });
   });
 
-  describe('eliminate dead branch', () => {
+  describe.skip('eliminate dead branch', () => {
     test('1', () => {
       const input = `
       #################

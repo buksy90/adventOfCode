@@ -1,3 +1,6 @@
+import { readFile, writeFile } from 'fs/promises';
+import { join } from 'path';
+
 type Position = [number, number];
 export type Trace = Position[] & { hasMore?: boolean };
 export type TMap = string[][];
@@ -96,8 +99,7 @@ function hasBeenSeen(traces: Trace[], position: Position, minStep = 0, maxStep =
   return traces.some(trace => trace.some((p, index) => assertSamePos(p, position) && index < maxStep && index > minStep));
 }
 
-const MAX_STEPS = 20000;
-const MAX_BRANCHES = 10;
+const MAX_STEPS = 800000;
 export function findAllTraces(map: TMap): Trace[] {
   const start = findCharacter(map, 'S');
   const end = findCharacter(map, 'E');
@@ -159,9 +161,9 @@ export function parseMap(input: string): TMap {
 }
 
 export function draw(trace: Trace, map: TMap, cutYLess = 0): TMap {
-  const result = map.map(row => row.map(c => c));
+  const result: TMap = map.map(row => row.map(c => c === '#' ? '🧱' : '⬜'));
   for(const step of trace) {
-    result[step[1]][step[0]] = 'X';
+    result[step[1]][step[0]] = '👣';
   }
 
   return result.filter((_, y) => y >= cutYLess);
@@ -258,6 +260,17 @@ export function isEquallyGood(trace: Trace, traces: Trace[], position = trace[tr
   return isAsGood;
 }
 
+export function isWorse(trace: Trace, traces: Trace[], position = trace[trace.length - 1]): boolean {
+  const currentTraceIndex = traces.indexOf(trace);
+
+  const isAnyBetter = traces.some((testTrace, traceIndex) => traceIndex !== currentTraceIndex && testTrace.some((p, index) => {
+    const samePosIndex = testTrace.findIndex(p => assertSamePos(p, position));
+    return samePosIndex !== -1 && samePosIndex < trace.length - 1;
+  }));
+
+  return isAnyBetter;
+}
+
 export function eliminateBadBranches(map: TMap) {
   const start = findCharacter(map, 'S');
   const end = findCharacter(map, 'E');
@@ -268,34 +281,29 @@ export function eliminateBadBranches(map: TMap) {
   do {
     const newTraces: Position[][] = [];
     for(const trace of possible) {
-      const nextSteps = getNextPossibleMovements(map, trace)
-        .filter(next => !isReturningInOtherBranch(trace, possible, next))
+      const nextSteps = getNextPossibleMovements(map, trace);
       const visualization = possible.map(trace => draw(trace, map));
-
-
-
-      // 4
-      // 5 - must be less than +0
-      if (nextSteps.length === 1 && hasBeenSeen(possible, nextSteps[0],  0, trace.length)) {
-        if(map[nextSteps[0][1]][nextSteps[0][0]] === 'E') {
-          continue;
-        }
-        //eliminateBadBranch(map, trace, possible);
-        map[trace[trace.length - 1][1]][trace[trace.length - 1][0]] = '#';
+      if (nextSteps.length === 0) {
         toBeRemoved.push(trace);
       }
-
       else {
-        const nextNewSteps = nextSteps.filter(s => !hasBeenSeen(possible, s, trace.length));
-        if (nextNewSteps.length) {
-          const firstResult = nextNewSteps.pop()!;
-          nextNewSteps.forEach((step) => {
-            newTraces.push([...trace, step]);
-          });
-          trace.push(firstResult);
-        } else {
-          toBeRemoved.push(trace);
+        for(const nextStep of nextSteps) {
+          trace.push(nextStep);
+          if (isWorse(trace, possible)) {
+            toBeRemoved.push(trace);
+          }
+          else if (assertSamePos(nextStep, end)) {
+            found.push([...trace]);
+            toBeRemoved.push(trace);
+          }
+          else if (isReturningInOtherBranch(trace, possible)) {
+            toBeRemoved.push(trace);
+          }
+          trace.pop();
         }
+
+        if(nextSteps.length > 0) trace.push(nextSteps.pop()!);
+        nextSteps.forEach(step => newTraces.push([...trace, step]));
       }
     }
 
@@ -308,22 +316,119 @@ export function eliminateBadBranches(map: TMap) {
       possible.splice(index, 1);
     }
     toBeRemoved.length = 0;
-
-
-    //const visualization = possible.map(trace => draw(trace, map, 130));
-
-    // Remove finished
-    for(let i = possible.length - 1; i >= 0; i--) {
-      const trace = possible[i];
-
-      if (trace.length > 1) {
-        const lastStep = trace[trace.length - 1];
-        if(assertSamePos(lastStep, end)) {
-          found.push(...possible.splice(i, 1));
-        }
-      }
-    }
   } while (++iteration < MAX_STEPS && possible.length > 0)
 
   return found;
+}
+
+function posToKey(p: Position): string {
+  return `${p[0]},${p[1]}`;
+}
+
+function filterUntakenSteps(possibleSteps: Position[], index: number, takenSteps: Map<string, number>): Position[] {
+  return possibleSteps.filter(step => {
+    const match = takenSteps.get(posToKey(step));
+    return match === undefined || index < match;
+  });
+}
+
+function saveTakenStep(trace: Trace, takenSteps: Map<string, number>) {
+  const key = posToKey(trace[trace.length - 1]);
+  const bestKnown = takenSteps.get(key) || Number.MAX_SAFE_INTEGER;
+  const traceScore = score(trace);
+  //const traceScore = trace.length - 1;
+
+  if (traceScore < bestKnown) {
+    takenSteps.set(key, traceScore);
+  }
+}
+
+export function findAllTracesImproved(map: TMap, takenSteps: Map<string, number> = new Map()): Trace[] {
+  const start = findCharacter(map, 'S');
+  const end = findCharacter(map, 'E');
+  //const takenSteps = new Map<string, number>();
+  const found: Trace[] = [];
+  let evaluated: Trace[] = [[start]];
+  const maxTraceSteps = 800;
+
+  let iteration = 0;
+  do {
+    //const visualization = evaluated.map(trace => draw(trace, map));
+    const newlyTakenSteps: Position[] = [];
+    let trace: Trace | undefined;
+
+    let maxEvaluated = 0;
+    while((trace = evaluated.pop())) {
+      if (!trace) break;
+
+      if (trace.length > maxTraceSteps) continue;
+
+      const nextSteps = getNextPossibleMovements(map, trace);
+      const nextUntakenSteps = filterUntakenSteps(nextSteps, trace.length, takenSteps);
+
+      for(const nextStep of nextUntakenSteps) {
+        if (assertSamePos(nextStep, end))
+          found.push([...trace, nextStep]);
+        else {
+          evaluated.push([...trace, nextStep]);
+          newlyTakenSteps.push(nextStep);
+          saveTakenStep(trace, takenSteps);
+        }
+      }
+
+      if (maxEvaluated++ > 50) break;
+    }
+
+    if (iteration % 100 === 0) console.log({ iteration, found: found.length, evaluated: evaluated.length });
+  } while(++iteration < MAX_STEPS && evaluated.length > 0)
+
+  return found;
+}
+
+export async function getPrefilledTakenSteps(): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  const known = await parseKnownTraces();
+
+  for(const [_score, trace] of known) {
+    do {
+      saveTakenStep(trace, map);
+      trace.pop();
+    } while(trace.length > 0)
+  }
+
+  return map;
+}
+
+async function parseKnownTraces(): Promise<[number, Trace][]> {
+  let input: string = '';
+  try {
+    input = await readFile(join(__dirname, KNOWN_FILE), { encoding: 'utf8' });
+  } catch {}
+
+  const result = input.trim().split('\n')
+    .filter(r => r && r.length > 0)
+    .map(r => {
+      const [score, traceStr] = r.split('\t');
+      const trace = traceStr.split(';').map(p => p.split(',').map(Number) as Position);
+      return [Number(score), trace] as [number, Trace];
+  });
+
+  result.sort((a,b) => a[0] - b[0]);
+  return result;
+}
+
+const KNOWN_FILE = '16known.txt';
+export async function writeKnownTraces(trace: Trace) {
+  const known = await parseKnownTraces();
+  const s = score(trace);
+
+  if (known.some(t => t[0] === s)) {
+    console.log('Already known');
+    return;
+  }
+
+  const input = known.map(([s, trace]) => `${s}\t${trace.map(p => `${p[0]},${p[1]}`).join(';')}`).join('\n');
+  const line = `${s}\t${trace.map(p => `${p[0]},${p[1]}`).join(';')}`;
+
+  await writeFile(join(__dirname, KNOWN_FILE), input + '\n' + line, { encoding: 'utf8' });
 }

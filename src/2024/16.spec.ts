@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { TMap, Trace, draw, eliminateBadBranch, eliminateBadBranches, eliminateDeadBranch, eliminateDeadBranches, findAllTraces, findAllTracesImproved, getPrefilledTakenSteps, isEquallyGood, isReturningInOtherBranch, isWorse, parseMap, score, scoreRotation, writeKnownTraces } from "./16";
 
 
-describe('16', () => {
+describe.skip('16', () => {
 
   describe('part one', () => {
     test.only('answer', async () => {

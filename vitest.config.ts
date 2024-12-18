@@ -4,4 +4,7 @@ export default defineConfig({
   build: {
     //sourcemap: false,
   },
+  test: {
+    silent: false,
+  }
 });

@@ -1,10 +1,11 @@
-import { readFile, writeFile } from 'fs/promises';
+import { createWriteStream } from 'fs';
+import { readFile, open } from 'fs/promises';
 import { join } from 'path';
 
 type Stones = number[];
 
 type List = {
-    value: BigInt | number;
+    value: number;
     next: List | null;
 }
 
@@ -97,7 +98,68 @@ export function blinkList(list: List): List {
     return list;
 }
 
+type StonesList = {
+    depth: number;
+    list: List;
+}
+type StonesState = [number, ...StonesList[]];
+export function blinkState(state: StonesState): StonesState {
+    //console.log({ sum: state[0], stateLength: state.length });
+    if (state.length === 1) return state;
+
+    const lastList = state.pop() as StonesList;
+    const firstStone = lastList.list.value;
+    const nextListItem = lastList.list.next;
+    if (nextListItem) {
+        lastList.list = nextListItem;
+        state.push(lastList);
+    }
+
+    const newStones = transformStone(firstStone);
+    if (lastList.depth === 1) {
+        state[0] += newStones.length;
+        return blinkState(state);
+    }
+
+    state.push({ depth: lastList.depth - 1, list: toList(newStones) });
+    return blinkState(state);
+}
+
+
+/*
+export function blinkNumber(input: number, depth: number): number {
+    if (depth === 0) return 1;
+    const transformed = transformStone(input);
+    return transformed.length === 1
+        ? blinkNumber(transformed[0], depth - 1)
+        : blinkNumber(transformed[0], depth - 1) + blinkNumber(transformed[1], depth - 1);
+}*/
+
+/*
 const TEMP_FILE = join(__dirname, '11.tmp');
-export async function blinkListInBatches() {
+export async function blinkListInBatches(input: Stones) {
+
     input = await readFile(TEMP_FILE, { encoding: 'utf8' });
 }
+
+
+export async function* readInput(): AsyncGenerator {
+    const fd = await open('sample.txt');
+    const fileSize = (await fd.stat()).size;
+    const stream = fd.createReadStream();
+    stream.setEncoding('utf8');
+
+    let pos = 0;
+    let leftover = '';
+    while(pos <= fileSize) {
+        const data = stream.read(512) as string;
+        const chunks = (leftover + data).split(' ');
+
+        leftover = chunks.pop() || '';
+
+        yield chunks.map(s => parseInt(s, 10));
+    }
+
+    return null;
+}
+*/

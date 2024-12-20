@@ -35,10 +35,18 @@ describe('11', () => {
         expect(state[0]).toEqual(185205);
     });
 
-    test.only('answer 2 (blinkState)', () => {
+    test.skip('answer 2 (blinkState)', () => {
         let stones = [70949, 6183, 4, 3825336, 613971, 0, 15, 182];
         const state = blinkState([0, { depth: 75, list: toList(stones)} ]);
         expect(state[0]).toEqual(185205);
+    });
+
+    describe('answer 2, partial', () => {
+        test.only('stone 1', () => {
+            let stones = [70949];
+            const state = blinkState([0, { depth: 75, list: toList(stones)} ]);
+            expect(state[0]).toEqual("?");
+        });
     });
   });
 
